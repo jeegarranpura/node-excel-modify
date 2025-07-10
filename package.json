@@ -4,7 +4,10 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node final.js"
+    "start": "node final.js",
+    "start1": "node duplicateColumn.js",
+    "start2": "node programm.js",
+    "start3": "node dynamicColMultiple.js"
   },
   "keywords": [],
   "author": "",

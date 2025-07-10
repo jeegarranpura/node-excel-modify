@@ -2,7 +2,7 @@ const { exec } = require("child_process");
 const path = require('path');
 const inputPath = "./input.xlsx";
 
-const inputFilePath = path.join(__dirname, "result.xlsx");
+const inputFilePath = path.join(__dirname, "updated_sample.xlsx");
 const outputFilePath = path.join(__dirname, "output.xlsx");
 const outputPath = "./output";
 
