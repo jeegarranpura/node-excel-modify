@@ -2,9 +2,12 @@ const ExcelJS = require("exceljs");
 const path = require("path");
 const fs = require("fs");
 
-async function mergeSheets(masterFilePath, outputFilePath) {
+async function mergeSheets(masterFilePath, outputFilePath, childFilePath) {
   const masterWB = new ExcelJS.Workbook();
+  const childWB = new ExcelJS.Workbook();
+
   await masterWB.xlsx.readFile(masterFilePath);
+  await childWB.xlsx.readFile(childFilePath);
   const worksheet = masterWB.getWorksheet("Detailed Model");
 
   // Mapping of source to target columns
@@ -39,7 +42,7 @@ async function mergeSheets(masterFilePath, outputFilePath) {
 
       // Replace all references from sourceCol to targetCol
       if (newValue !== null && typeof newValue === 'object') {
-        newValue = replaceColumnReferencesInObject(newValue, sourceCol, targetCol);
+        newValue = replaceColumnReferencesInObject(newValue, sourceCol, targetCol); 
       }
 
       targetCell.value = newValue;
@@ -54,5 +57,6 @@ async function mergeSheets(masterFilePath, outputFilePath) {
 // Usage
 const masterFilePath = path.join(__dirname, "sample_final.xlsx");
 const outputFilePath = path.join(__dirname, "updated_sample.xlsx");
+const childfilePath = path.join(__dirname, "child.xlsx")
 
-mergeSheets(masterFilePath, outputFilePath);
+mergeSheets(masterFilePath, outputFilePath, childfilePath);
