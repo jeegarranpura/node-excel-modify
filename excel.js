@@ -14,6 +14,7 @@ async function mergeSheets(masterFilePath, childFilePath, outputFilePath, newFil
 
   // Remove existing Sheet2 if present
   const existingSheet2 = masterWB.getWorksheet("Asset Codes");
+  
   if (existingSheet2) {
     masterWB.removeWorksheet(existingSheet2.id);
   }
