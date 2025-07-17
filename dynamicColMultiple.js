@@ -3,30 +3,74 @@ const path = require("path");
 const fs = require("fs");
 
 async function mergeSheets(masterFilePath, outputFilePath, childFilePath) {
-  const body = [
+  // const body = [
+  //   {
+  //     cellId: "I131",
+  //     value: "'Sheet1'!$H$1:$BZ$1",
+  //   },
+  //   {
+  //     cellId: J131,
+  //     value: "'Sheet1'!$B$2:$B$500",
+  //   },
+  //   {
+  //     cellId: K131,
+  //     value: "'Sheet1'!$B$2:$B$500",
+  //   },
+  //   {
+  //     cellId: I132,
+  //     value: "'Sheet2'!$H$1:$BZ$1",
+  //   },
+  //   {
+  //     cellId: J132,
+  //     value: "'Sheet2'!$B$2:$B$500",
+  //   },
+  //   {
+  //     cellId: K132,
+  //     value: "'Sheet2'!$B$2:$B$500",
+  //   },
+  // ];
+  const sheetBody = [
     {
-      cellId: I131,
-      value: "'Sheet1'!$H$1:$BZ$1",
+      sheet_index: 0,
+      sheet_name: "Sheet1",
+      ranges: [
+        {
+          cellId: "I131",
+          value: "$H$1:$BZ$1",
+          cell: "$A$131",
+        },
+        {
+          cellId: "J131",
+          value: "$B$2:$B$500",
+          cell: "$B$131",
+        },
+        {
+          cellId: "K131",
+          value: "$H$2:$BZ$500",
+          cell: "$C$131",
+        },
+      ],
     },
     {
-      cellId: J131,
-      value: "'Sheet1'!$B$2:$B$500",
-    },
-    {
-      cellId: K131,
-      value: "'Sheet1'!$B$2:$B$500",
-    },
-    {
-      cellId: I132,
-      value: "'Sheet2'!$H$1:$BZ$1",
-    },
-    {
-      cellId: J132,
-      value: "'Sheet2'!$B$2:$B$500",
-    },
-    {
-      cellId: K132,
-      value: "'Sheet2'!$B$2:$B$500",
+      sheet_index: 1,
+      sheet_name: "Sheet2",
+      ranges: [
+        {
+          cellId: "I132",
+          value: "$H$1:$BZ$1",
+          cell: "$A$132",
+        },
+        {
+          cellId: "J132",
+          value: "$B$2:$B$500",
+          cell: "$B$132",
+        },
+        {
+          cellId: "K132",
+          value: "$H$2:$BZ$500",
+          cell: "$C$132",
+        },
+      ],
     },
   ];
   const masterWB = new ExcelJS.Workbook();
@@ -36,28 +80,33 @@ async function mergeSheets(masterFilePath, outputFilePath, childFilePath) {
   await childWB.xlsx.readFile(childFilePath);
   const worksheet = masterWB.getWorksheet("Detailed Model");
 
-  body.filter((items) => {
-    worksheet.getCell(items.cell).value = items.value;
-  });
-
-  const childSheet = childWB.worksheets[0];
-  if (!childSheet) {
-    console.error("❌ Sheet not found in child file.");
-    return;
-  }
-
-  const newSheet = masterWB.addWorksheet("Asset Codes");
-
-  childSheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
-    const newRow = newSheet.getRow(rowNumber);
-    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-      const newCell = newRow.getCell(colNumber);
-      newCell.value = cell.value;
-
-      // Copy style
-      newCell.style = { ...cell.style };
+  sheetBody.filter((items) => {
+    items.ranges.filter((subItems) => {
+      // =CONCATENATE("'","Asset Codes","'","!","$A$1:$A$10")
+      worksheet.getCell(subItems.cell).value = {
+       formula: `=CONCATENATE("'","${items.sheet_name}","'","!","${subItems.value}")`
+      };
     });
-    newRow.commit();
+
+    const childSheet = childWB.getWorksheet(items.sheet_name);
+    if (!childSheet) {
+      console.error("❌ Sheet not found in child file.");
+      return;
+    }
+
+    const newSheet = masterWB.addWorksheet(items.sheet_name);
+
+    childSheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+      const newRow = newSheet.getRow(rowNumber);
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        const newCell = newRow.getCell(colNumber);
+        newCell.value = cell.value;
+
+        // Copy style
+        newCell.style = { ...cell.style };
+      });
+      newRow.commit();
+    });
   });
 
   // Mapping of source to target columns
@@ -65,6 +114,12 @@ async function mergeSheets(masterFilePath, outputFilePath, childFilePath) {
     I: "M",
     J: "N",
     K: "O",
+  };
+
+  const formulaReplaceMap = {
+    $A$131: "$A$132",
+    $B$131: "$B$132",
+    $C$131: "$C$132",
   };
 
   // Utility to update formula/refs safely
@@ -76,6 +131,17 @@ async function mergeSheets(masterFilePath, outputFilePath, childFilePath) {
       return match.replace(new RegExp(`\\$?${oldCol}`, "i"), (colMatch) => {
         return colMatch.replace(oldCol, newCol);
       });
+    });
+
+    return JSON.parse(stringified);
+  }
+
+  function replaceSpecificFormulaValues(obj, replaceMap) {
+    let stringified = JSON.stringify(obj);
+
+    Object.entries(replaceMap).forEach(([oldVal, newVal]) => {
+      const regex = new RegExp(oldVal.replace(/\$/g, "\\$"), "g");
+      stringified = stringified.replace(regex, newVal);
     });
 
     return JSON.parse(stringified);
@@ -97,6 +163,7 @@ async function mergeSheets(masterFilePath, outputFilePath, childFilePath) {
           sourceCol,
           targetCol
         );
+        newValue = replaceSpecificFormulaValues(newValue, formulaReplaceMap);
       }
 
       targetCell.value = newValue;
@@ -109,8 +176,8 @@ async function mergeSheets(masterFilePath, outputFilePath, childFilePath) {
 }
 
 // Usage
-const masterFilePath = path.join(__dirname, "sample_final.xlsx");
+const masterFilePath = path.join(__dirname, "new_example.xlsx");
 const outputFilePath = path.join(__dirname, "updated_sample.xlsx");
-const childfilePath = path.join(__dirname, "child.xlsx");
+const childfilePath = path.join(__dirname, "child_new.xlsx");
 
 mergeSheets(masterFilePath, outputFilePath, childfilePath);
