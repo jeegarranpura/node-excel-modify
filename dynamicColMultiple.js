@@ -84,7 +84,7 @@ async function mergeSheets(masterFilePath, outputFilePath, childFilePath) {
     items.ranges.filter((subItems) => {
       // =CONCATENATE("'","Asset Codes","'","!","$A$1:$A$10")
       worksheet.getCell(subItems.cell).value = {
-       formula: `=CONCATENATE("'","${items.sheet_name}","'","!","${subItems.value}")`
+        formula: `=CONCATENATE("'","${items.sheet_name}","'","!","${subItems.value}")`,
       };
     });
 
@@ -147,6 +147,19 @@ async function mergeSheets(masterFilePath, outputFilePath, childFilePath) {
     return JSON.parse(stringified);
   }
 
+  function replaceColumnLetters(value, columnMap) {
+    let stringified = JSON.stringify(value);
+
+    Object.entries(columnMap).forEach(([sourceCol, targetCol]) => {
+      const regex = new RegExp(`(\\$?)${sourceCol}(\\$?\\d+)`, "gi");
+      stringified = stringified.replace(regex, (match, dollarSign, rowPart) => {
+        return `${dollarSign}${targetCol}${rowPart}`;
+      });
+    });
+
+    return JSON.parse(stringified);
+  }
+
   // Iterate over each source-target column pair
   Object.entries(columnMap).forEach(([sourceCol, targetCol]) => {
     const sourceColumn = worksheet.getColumn(sourceCol);
@@ -158,11 +171,7 @@ async function mergeSheets(masterFilePath, outputFilePath, childFilePath) {
 
       // Replace all references from sourceCol to targetCol
       if (newValue !== null && typeof newValue === "object") {
-        newValue = replaceColumnReferencesInObject(
-          newValue,
-          sourceCol,
-          targetCol
-        );
+        newValue = replaceColumnLetters(newValue, columnMap);
         newValue = replaceSpecificFormulaValues(newValue, formulaReplaceMap);
       }
 
