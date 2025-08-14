@@ -136,6 +136,7 @@ async function mergeSheets(masterFilePath, outputFilePath, childFilePath) {
     return JSON.parse(stringified);
   }
 
+  // replace formulas cells into columns with row number 
   function replaceSpecificFormulaValues(obj, replaceMap) {
     let stringified = JSON.stringify(obj);
 
@@ -147,6 +148,7 @@ async function mergeSheets(masterFilePath, outputFilePath, childFilePath) {
     return JSON.parse(stringified);
   }
 
+  // Copy and Replace columns from one to another  - I - M
   function replaceColumnLetters(value, columnMap) {
     let stringified = JSON.stringify(value);
 
